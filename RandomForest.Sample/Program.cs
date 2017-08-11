@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Xml;
 using System.IO;
 using CsvHelper;
@@ -11,10 +10,10 @@ namespace RandomForest.Sample
     {
         static void Main(string[] args)
         {
-            Forest randomForest;
+            RegressionRandomForest regressionRF;
             using (XmlReader reader = XmlReader.Create("regression_rf.pmml"))
             {
-                randomForest = new Forest(reader);
+                regressionRF = new RegressionRandomForest(reader);
             }
 
             // we have the random forest! now let's build a dictionary to compare the predictions in R with the ones here
@@ -35,12 +34,45 @@ namespace RandomForest.Sample
                     var item = headers.Zip(row, (key, value) => new { key, value }).ToDictionary(e => e.key, e => e.value);
 
                     var rPrediction = double.Parse(item["PredictedG3"]);
-                    var cSharpPrediction = randomForest.Predict(item);
+                    var cSharpPrediction = regressionRF.Predict(item);
 
                     Console.WriteLine($"Processing line {lineNumber++} - R prediction: {rPrediction} - C#: {cSharpPrediction}");
 
                     var differencePercentage = Math.Abs((rPrediction - cSharpPrediction) / rPrediction);
                     if(differencePercentage >= 0.00001)
+                    {
+                        Console.WriteLine("   OOOOOPSSSSS");
+                    }
+                }
+            }
+
+            ClassificationRandomForest classificationRF;
+            using (XmlReader reader = XmlReader.Create("classification_rf.pmml"))
+            {
+                classificationRF = new ClassificationRandomForest(reader);
+            }
+
+            using (TextReader reader = File.OpenText("classification_rf_prediction.csv"))
+            {
+                var csv = new CsvParser(reader);
+                string[] headers = csv.Read();
+                int lineNumber = 1;
+                while (true)
+                {
+                    var row = csv.Read();
+                    if (row == null)
+                    {
+                        break;
+                    }
+
+                    var item = headers.Zip(row, (key, value) => new { key, value }).ToDictionary(e => e.key, e => e.value);
+
+                    var rPrediction = item["PredictedOccupancy"];
+                    var cSharpPrediction = classificationRF.Predict(item);
+
+                    Console.WriteLine($"Processing line {lineNumber++} - R prediction: {rPrediction} - C#: {cSharpPrediction}");
+
+                    if (rPrediction != cSharpPrediction)
                     {
                         Console.WriteLine("   OOOOOPSSSSS");
                     }
