@@ -78,6 +78,36 @@ namespace RandomForest.Sample
                     }
                 }
             }
+
+            using (TextReader reader = File.OpenText("classification_rf_probabilities.csv"))
+            {
+                var csv = new CsvParser(reader);
+                string[] headers = csv.Read();
+                int lineNumber = 1;
+                while (true)
+                {
+                    var row = csv.Read();
+                    if (row == null)
+                    {
+                        break;
+                    }
+
+                    var item = headers.Zip(row, (key, value) => new { key, value }).ToDictionary(e => e.key, e => e.value);
+
+                    var rYes = double.Parse(item["yes"]);
+                    var rNo = double.Parse(item["no"]);
+                    var cSharpProbabilities = classificationRF.GetProbabilities(item);
+
+                    Console.WriteLine($"Processing line {lineNumber++} - p(yes) R: {rYes} - C#: {cSharpProbabilities["yes"]} - p(no) R: {rNo} - C#: {cSharpProbabilities["no"]}");
+
+                    if (cSharpProbabilities["yes"] != rYes || cSharpProbabilities["no"] != rNo)
+                    {
+                        Console.WriteLine("        OOOOOOPS");
+                    }
+
+                    Console.WriteLine($"Processing line {lineNumber++} - C#: {string.Join(", ", cSharpProbabilities.Select(e => $"{e.Key}: {e.Value}"))}");
+                }
+            }
         }
     }
 }
